@@ -53,6 +53,10 @@ app.use("/auth", AuthRouter);
 app.use("/rooms", RoomRouter);
 app.use("/messages", MessageRouter);
 
+app.get("/", (_req: Request, res: Response) => {
+  res.status(200).json({ message: "welcome to chat app BE" });
+});
+
 export const server = createServer(app);
 const io = new Server(server, {
   cors: {
