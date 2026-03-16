@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Socket Test</h1>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+      const socket = io("http://localhost:8080", {
+        auth: {
+          token:
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAdGVzdC5jb20iLCJ1c2VySWQiOiI2OWFmMjdkZjU5MGZjYmYwYmYzZDFhODkiLCJpYXQiOjE3NzM0ODkwNTksImV4cCI6MTc3MzQ5MjY1OX0.QrOptvZf7J4-IyHVM6U3VrkW4VU2XlJXHV0B3rqFvy0",
+        },
+      });
+
+      socket.on("connect", () => {
+        console.log("Connected:", socket.id);
+      });
+
+      socket.on("server:new_message", (data) => {
+        console.log("New message:", data);
+      });
+
+      socket.on("server:viewed_message", (data) => {
+        console.log("Read By: ", data);
+      });
+
+      socket.on("server:user_offline", (data) => {
+        console.log("Last seen: ", data);
+      });
+    </script>
+  </body>
+</html>

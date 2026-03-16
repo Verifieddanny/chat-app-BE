@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Socket Test</h1>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+      const socket = io("http://localhost:8080", {
+        auth: {
+          token:
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAdGVzdDIuY29tIiwidXNlcklkIjoiNjliMDVlMTJiYWU4NTBiMGIyYmM5MWY3IiwiaWF0IjoxNzczNDg5MDg5LCJleHAiOjE3NzM0OTI2ODl9.MxG6EBK3BR4xLEb1cWHeHwyXASEOQyMgTtHsHpwPmq8",
+        },
+      });
+
+      socket.on("connect", () => {
+        console.log("Connected:", socket.id);
+      });
+
+      socket.on("server:new_message", (data) => {
+        console.log("New message: ", data);
+      });
+
+      socket.on("server:user_online", (data) => {
+        console.log("user online: ", data);
+      });
+
+      socket.on("server:user_typing", (data) => {
+        console.log("Is Typing: ", data);
+      });
+
+      socket.on("server:user_offline", (data) => {
+        console.log("User offline: ", data);
+      });
+
+    </script>
+  </body>
+</html>

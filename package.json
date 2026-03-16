@@ -1,0 +1,44 @@
+{
+  "name": "chat-app-be",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx --watch --env-file=.env src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "mocha --loader=ts-node/esm --no-warnings 'tests/**/*.spec.ts' --timeout 25000 --exit"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.2.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/chai-as-promised": "^8.0.2",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.3.5",
+    "@types/sinon": "^21.0.0",
+    "@types/sinon-chai": "^4.0.0",
+    "chai": "^6.2.2",
+    "chai-as-promised": "^8.0.2",
+    "mocha": "^11.7.5",
+    "sinon": "^21.0.2",
+    "sinon-chai": "^4.0.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
