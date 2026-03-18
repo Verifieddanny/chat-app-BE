@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { validationResult } from "express-validator";
-import type { CustomError, UserPayload } from "../shared/types.js";
+import type { AuthRequest, CustomError, UserPayload } from "../shared/types.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { SignOptions } from "jsonwebtoken";
@@ -115,6 +115,68 @@ export const login = async (
       userId: loadedUser._id.toString(),
       username: loadedUser.username,
       displayPicture: loadedUser.displayPicture || null,
+    });
+  } catch (error) {
+    const err = error as CustomError;
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+export const getUserDetails = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "invalid or no User Id" });
+    }
+
+    const currentUser = await user.findById(userId).select("-password");
+
+    res.status(200).json({
+      message: "user fetched",
+      data: currentUser,
+    });
+  } catch (error) {
+    const err = error as CustomError;
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+export const findUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userToFind = (req.query.search as string) || "";
+    if (!userToFind) {
+      return res.status(400).json({ message: "invalid req" });
+    }
+
+    const searchRegex = new RegExp(userToFind, "i");
+
+    const userFound = await user
+      .find({
+        $or: [
+          { username: searchRegex },
+          { firstname: searchRegex },
+          { lastname: searchRegex },
+        ],
+      })
+      .select("-password");
+
+    res.status(200).json({
+      message: "users fetched",
+      userFound: userFound,
     });
   } catch (error) {
     const err = error as CustomError;

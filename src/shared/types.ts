@@ -33,4 +33,5 @@ export interface ClientTyping {
 
 export interface ReadReceipt {
   messageId: string
+  roomId: string
 }
