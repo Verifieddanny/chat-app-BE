@@ -74,71 +74,87 @@ if (isDBConnected) {
 
 io.on("connection", async (socket) => {
   const authSocket = socket as AuthSocket;
-  console.log("User connected:", authSocket.userId);
+  const userId = authSocket.userId;
 
-  const userRooms = await getAllUserRooms(authSocket.userId || "");
+  if (!userId) {
+    console.log("Connection rejected: No User ID");
+    return socket.disconnect();
+  }
+  console.log("User connected:", userId);
+
+  const userRooms = await getAllUserRooms(userId || "");
 
   userRooms.forEach((r) => {
     socket.join(r._id.toString());
     socket.to(r._id.toString()).emit("server:user_online", {
-      user: authSocket.userId,
+      userId: userId,
       status: "online",
     });
   });
 
+  const onlineIds = Array.from(io.sockets.sockets.values())
+    .map((s) => (s as any).userId)
+    .filter((id) => id && id !== userId);
+
+  socket.emit("server:initial_online_users", onlineIds);
+
   console.log(`Joined ${userRooms.length} rooms`);
 
-  socket.join(authSocket.userId?.toString() || "");
+  socket.join(userId?.toString() || "");
 
   socket.on("client:send_message", async (args: SendMessageEvent) => {
-    const savedMessage = await saveMessage(
-      args.roomId,
-      args.content,
-      authSocket.userId || "",
-    );
+    try {
+      const savedMessage = await saveMessage(
+        args.roomId,
+        args.content,
+        userId || "",
+      );
 
-    socket.to(savedMessage.to.toString()).emit("server:new_message", {
-      roomId: savedMessage.to.toString(),
-      content: savedMessage.content,
-      from: authSocket.userId,
-      timeStamp: new Date().toISOString(),
-    });
+      io.to(args.roomId).emit("server:new_message", {
+        ...savedMessage,
+        roomId: args.roomId,
+        timeStamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
+  });
+
+  socket.on("client:read_receipt", async (args: ReadReceipt) => {
+    try {
+      const updatedMessage = await addUserToViewedBy(args.messageId, userId || "");
+      if (updatedMessage) {
+        const roomIdStr = args.roomId;
+        io.to(roomIdStr).emit("server:viewed_message", {
+          messageId: args.messageId,
+          roomId: roomIdStr,
+          viewedBy: updatedMessage.viewedBy,
+        });
+      }
+    } catch (error) {
+      console.error("Read receipt error:", error);
+    }
   });
 
   socket.on("client:is_typing", (args: ClientTyping) => {
     socket.to(args.roomId.toString()).emit("server:user_typing", {
       roomId: args.roomId,
-      userId: authSocket.userId,
+      userId: userId,
     });
   });
 
-  socket.on("client:read_receipt", async (args: ReadReceipt) => {
-    const updatedMessage = await addUserToViewedBy(
-      args.messageId,
-      authSocket.userId || "",
-    );
-
-    if (updatedMessage) {
-      socket.to(updatedMessage.from.toString()).emit("server:viewed_message", {
-        messageId: args.messageId,
-        roomId: updatedMessage.to.toString(),
-        viewedBy: updatedMessage.viewedBy,
-      });
-    }
-  });
-
   socket.on("disconnect", async () => {
-    const updatedUser = await updateLastSeen(authSocket.userId || "");
+    const updatedUser = await updateLastSeen(userId || "");
     if (updatedUser) {
       userRooms.forEach((r) => {
         socket.to(r._id.toString()).emit("server:user_offline", {
-          user: updatedUser._id.toString(),
+          userId: updatedUser._id.toString(),
           status: "offline",
           lastSeen: updatedUser.lastSeen,
         });
       });
     }
-    console.log("User Disconnected:", authSocket.userId);
+    console.log("User Disconnected:", userId);
   });
 });
 

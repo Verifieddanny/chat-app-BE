@@ -38,7 +38,8 @@ export const getRoomMessage = async (
       .sort({ createdAt: -1 })
       .skip((+currentPage - 1) * pageSize)
       .limit(pageSize)
-      .populate<{ from: IUser }>("from", "username displayPicture");
+      .populate<{ from: IUser }>("from", "username displayPicture")
+      .populate("viewedBy.user", "username displayPicture");
 
     res.status(200).json({ message: "Message history fetched", messages });
   } catch (error) {

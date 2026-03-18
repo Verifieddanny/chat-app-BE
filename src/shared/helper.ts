@@ -11,11 +11,7 @@ export const getAllUserRooms = async (
   return await room.find({ roomMembers: userId });
 };
 
-export const saveMessage = async (
-  roomId: string,
-  content: string,
-  userId: string,
-): Promise<IMessage> => {
+export const saveMessage = async (roomId: string, content: string, userId: string) => {
   const newMessage = new message({
     content,
     from: userId,
@@ -24,7 +20,15 @@ export const saveMessage = async (
 
   await newMessage.save();
 
-  return newMessage;
+  const savedMessage = await message
+    .findById(newMessage._id)
+    .populate("from", "username displayPicture")
+    .lean();
+
+  return { 
+    ...savedMessage, 
+    _id: savedMessage?._id.toString() 
+  };
 };
 
 export const addUserToViewedBy = async (messageId: string, userId: string) => {
