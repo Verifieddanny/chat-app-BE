@@ -9,22 +9,24 @@ export const SocketAuth = (
   const token = socket.handshake.auth.token;
 
   if (!token) {
-    const error: CustomError = new Error("Not Authenticated");
-    error.statusCode = 401;
+    const error = new Error("Not Authenticated") as CustomError;
     return next(error);
   }
 
-  let decodedToken: UserPayload = jwt.verify(
-    token,
-    process.env.SECRETE_KEY!,
-  ) as UserPayload;
+  try {
+    const decodedToken = jwt.verify(
+      token,
+      process.env.SECRETE_KEY!,
+    ) as UserPayload;
 
-  if (!decodedToken) {
-    const error: CustomError = new Error("Not Authenticated");
-    error.statusCode = 401;
+    if (!decodedToken) {
+      return next(new Error("Authentication error"));
+    }
+
+    socket.userId = decodedToken.userId;
+    next();
+  } catch (_err) {
+    const error = new Error("Authentication error") as CustomError;
     return next(error);
   }
-
-  socket.userId = decodedToken.userId;
-  next();
 };

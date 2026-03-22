@@ -110,11 +110,22 @@ io.on("connection", async (socket) => {
         userId || "",
       );
 
-      io.to(args.roomId).emit("server:new_message", {
+      const payload = {
         ...savedMessage,
         roomId: args.roomId,
         timeStamp: new Date().toISOString(),
-      });
+      };
+
+      io.to(args.roomId).emit("server:new_message", payload);
+
+      const RoomModel = (await import("./models/room.js")).default;
+      const roomData = await RoomModel.findById(args.roomId);
+
+      if (roomData) {
+        roomData.roomMembers.forEach((memberId) => {
+          io.to(memberId.toString()).emit("server:new_message", payload);
+        });
+      }
     } catch (error) {
       console.error("Failed to save message:", error);
     }
@@ -122,7 +133,10 @@ io.on("connection", async (socket) => {
 
   socket.on("client:read_receipt", async (args: ReadReceipt) => {
     try {
-      const updatedMessage = await addUserToViewedBy(args.messageId, userId || "");
+      const updatedMessage = await addUserToViewedBy(
+        args.messageId,
+        userId || "",
+      );
       if (updatedMessage) {
         const roomIdStr = args.roomId;
         io.to(roomIdStr).emit("server:viewed_message", {
@@ -142,6 +156,35 @@ io.on("connection", async (socket) => {
       userId: userId,
     });
   });
+
+  socket.on("client:join_room", (args: { roomId: string }) => {
+    socket.join(args.roomId);
+    console.log(`User ${userId} manually joined room: ${args.roomId}`);
+  });
+
+  socket.on(
+    "client:group_update",
+    async (args: {
+      roomId: string;
+      updateType: "member_added" | "member_removed" | "left" | "join" | "group_update";
+      recipientId?: string;
+    }) => {
+      io.to(args.roomId).emit("server:group_updated", { roomId: args.roomId });
+
+      const RoomModel = (await import("./models/room.js")).default;
+      const roomData = await RoomModel.findById(args.roomId);
+
+      if (roomData) {
+        roomData.roomMembers.forEach((memberId) => {
+          io.to(memberId.toString()).emit("server:group_updated", { roomId: args.roomId });
+        });
+      }
+      
+      if (args.updateType === "member_added" && args.recipientId) {
+        io.to(args.recipientId).emit("server:added_to_group", { roomId: args.roomId });
+      }
+    },
+  );
 
   socket.on("disconnect", async () => {
     const updatedUser = await updateLastSeen(userId || "");

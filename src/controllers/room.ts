@@ -82,6 +82,7 @@ export const getAllRooms = async (
 ) => {
   try {
     const activeUser = req.userId;
+    const MessageModel = (await import("../models/message.js")).default;
 
     if (!activeUser) {
       return res.status(401).json({ message: "Not authenticated" });
@@ -91,9 +92,22 @@ export const getAllRooms = async (
       roomMembers: IUser[];
     }>("roomMembers", "username displayPicture");
 
+    const roomsWithLastMsg = await Promise.all(
+      rooms.map(async (r) => {
+        const lastMsg = await MessageModel.findOne({ to: r._id })
+          .sort({ createdAt: -1 })
+          .populate("from", "username");
+
+        return {
+          ...r.toObject(),
+          lastMessage: lastMsg,
+        };
+      }),
+    );
+
     res.status(200).json({
       message: rooms.length ? "rooms fetched" : "No rooms found",
-      rooms,
+      rooms: roomsWithLastMsg,
     });
   } catch (error) {
     const err = error as CustomError;
@@ -113,6 +127,7 @@ export const getRoom = async (
   try {
     const roomId = req.params.roomId;
     const activeUser = req.userId;
+    const MessageModel = (await import("../models/message.js")).default;
 
     if (!roomId || !activeUser) {
       return res
@@ -120,14 +135,28 @@ export const getRoom = async (
         .json({ message: "Missing Room ID or User authentication" });
     }
 
-    const activeRoom = await room.findOne({
-      _id: roomId,
-      roomMembers: { $in: [activeUser] },
-    });
+    const activeRoom = await room
+      .findOne({
+        _id: roomId,
+        roomMembers: { $in: [activeUser] },
+      })
+      .populate("roomMembers", "username displayPicture firstName lastName");
+
+
+      if (!activeRoom) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+      const lastMessage = await MessageModel.findOne({ to: roomId })
+      .sort({ createdAt: -1 })
+      .populate("from", "username");
 
     res.status(200).json({
       message: "Room fetched",
-      activeRoom,
+      activeRoom: {
+        ...activeRoom.toObject(),
+        lastMessage: lastMessage 
+      },
     });
   } catch (error) {
     const err = error as CustomError;
@@ -341,7 +370,9 @@ export const updateRoomDetails = async (
     );
 
     if (!updatedRoom) {
-      return res.status(403).json({message: "Only Admin can update group details"});
+      return res
+        .status(403)
+        .json({ message: "Only Admin can update group details" });
     }
 
     res.status(200).json({ message: "room updated", updatedRoom });
