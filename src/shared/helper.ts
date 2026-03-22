@@ -33,8 +33,11 @@ export const saveMessage = async (roomId: string, content: string, userId: strin
 
 export const addUserToViewedBy = async (messageId: string, userId: string) => {
   const updatedMessage = await message
-    .findByIdAndUpdate(
-      messageId,
+    .findOneAndUpdate(
+      { 
+      _id: messageId, 
+      "viewedBy.user": { $ne: userId }
+    },
       {
         $addToSet: {
           viewedBy: {

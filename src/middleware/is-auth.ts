@@ -6,9 +6,9 @@ export const isAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.get("Authorization");
 
   if (!authHeader) {
-    const error: CustomError = new Error("Not Authenticated");
+    const error = new Error("Not Authenticated") as CustomError;
     error.statusCode = 401;
-    throw error;
+    return next(error);
   }
 
   const token = authHeader.split(" ")[1];
@@ -16,21 +16,29 @@ export const isAuth = (req: AuthRequest, res: Response, next: NextFunction) => {
   if (!token) {
     const error: CustomError = new Error("Not Authenticated!");
     error.statusCode = 401;
-    throw error;
+    return next(error);
   }
 
-  let decodedToken: UserPayload = jwt.verify(
-    token,
-    process.env.SECRETE_KEY!,
-  ) as UserPayload;
+  let decodedToken: UserPayload;
+
+  try {
+    decodedToken = jwt.verify(
+      token,
+      process.env.SECRETE_KEY!,
+    ) as unknown as UserPayload;
+  } catch (err) {
+    const error = err as CustomError;
+    error.message = "Token expired or invalid";
+    error.statusCode = 401;
+    return next(error);
+  }
 
   if (!decodedToken) {
-    const error: CustomError = new Error("Not Authenticated");
+    const error = new Error("Not Authenticated") as CustomError;
     error.statusCode = 401;
-    throw error;
+    return next(error);
   }
 
   req.userId = decodedToken.userId;
-
   next();
 };
